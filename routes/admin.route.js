@@ -1,4 +1,5 @@
 import { Router } from "express";
+import bcrypt from "bcrypt";
 import User from "../models/user.model.js";
 import Candidate from "../models/candidate.model.js";
 
@@ -10,12 +11,15 @@ adminRoute.post("/login",async(req,res)=>{
     try{
         const findAdmin = await User.findOne({Aadhar_Number})
         if(findAdmin){
-            const isValidPass = findAdmin.password === password
-            if(isValidPass){
-                res.status(200).json({success : 1, message : "Admin login success", data : findAdmin})
-            }else{
-                res.status(404).json({success : 0, message : "Invalid Password!"})
-            }
+            bcrypt.compare(password,findAdmin.password,(err,result) =>{
+                if(result){
+                    res.status(200).json({success : 1, message : "Admin login success", data : findAdmin});
+                }else if(err){
+                    res.status(400).json({success : 0, message : "Error hashing password!",Error : err});
+                }else{
+                    res.status(404).json({success : 0, message : "Invalid Password!"})
+                }
+            })
         }else{
             res.status(404).json({success : 0, message : "Invalid Aadhar_Card_Number!"})
         }
@@ -61,18 +65,14 @@ adminRoute.put("/update/:Aadhar_Number",async (req,res)=>{
                 const updateCandidate = await Candidate.findOneAndUpdate({name},{age,party},{new : true});
                 if(updateCandidate){
                     res.status(201).json({success : 1, message : "Candidate data Updated success", data : updateCandidate})
-                    // console.log("Candidate Data is Updated",{updateCandidate})
                 }else{
                     res.status(404).json({success : 0, message : "Not Candidate exist data record!"})
-                    // console.log("Not Candidate found")
                 }
             }else{
                 res.status(400).json({message : "You are not acciable for this data! Only admin access."})
-                // console.log("You are not access this data. Only admin access.")
             }
         }else{
             res.status(400).json({message : "Admin User not exist in data records!"})
-            //  console.log("Admin Not found");
         }
     } catch (error) {
         res.status(500).json({message: "Internal Server Error!",error})
